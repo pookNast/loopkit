@@ -1,0 +1,18 @@
+[
+  {
+    "session_id": "da0d9633-7f7b-4ebc-80f9-81a9c987a7df",
+    "transcript_path": "/home/pook/.claude/projects/-home-pook/da0d9633-7f7b-4ebc-80f9-81a9c987a7df.jsonl",
+    "cwd": "/tmp/loopkit",
+    "permission_mode": "acceptEdits",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "how do I explain how to use this to my freinds that are also devs?"
+  },
+  {
+    "session_id": "da0d9633-7f7b-4ebc-80f9-81a9c987a7df",
+    "transcript_path": "/home/pook/.claude/projects/-home-pook/da0d9633-7f7b-4ebc-80f9-81a9c987a7df.jsonl",
+    "cwd": "/tmp/loopkit",
+    "permission_mode": "acceptEdits",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "It needs to be authored by 'pookNast' not & claude. Again you are a tool not the author."
+  }
+]

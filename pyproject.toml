@@ -10,7 +10,7 @@ readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [
-    { name = "DraftSOS Research" },
+    { name = "pookNast" },
 ]
 keywords = [
     "ai-agents",
@@ -36,9 +36,9 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/DraftSOS/loopkit"
-Repository = "https://github.com/DraftSOS/loopkit"
-Issues = "https://github.com/DraftSOS/loopkit/issues"
+Homepage = "https://github.com/pookNast/loopkit"
+Repository = "https://github.com/pookNast/loopkit"
+Issues = "https://github.com/pookNast/loopkit/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/loopkit"]

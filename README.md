@@ -295,7 +295,7 @@ engine = store.load_beliefs()
 
 ## Origin
 
-Born from a [homelab orchestration system](https://x.com/mvanhorn/status/2063865685558903149) running 91 skills across multiple hosts with 24/7 autonomous agent loops.  The seven gems were extracted from production patterns and backed by research from arXiv:2605.00742 (Bayes-Consistent Orchestration), arXiv:2604.05333 (Graph-of-Skills), arXiv:2409.00094 (Condorcet + LLMs), and others.
+Born from a homelab orchestration system running 91 skills across multiple hosts with 24/7 autonomous agent loops.  The seven gems were extracted from production patterns and backed by research from arXiv:2605.00742 (Bayes-Consistent Orchestration), arXiv:2604.05333 (Graph-of-Skills), arXiv:2409.00094 (Condorcet + LLMs), and others.
 
 ## License
 
