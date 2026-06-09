@@ -11,3 +11,7 @@ build/
 *.so
 .env
 .venv
+
+.claude/
+logs/
+uv.lock
