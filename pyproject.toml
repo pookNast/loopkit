@@ -46,6 +46,9 @@ dev = [
     "ruff>=0.4",
 ]
 
+[project.scripts]
+loopkit = "loopkit.cli:main"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/loopkit"]
 
