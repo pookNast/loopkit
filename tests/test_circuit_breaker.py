@@ -38,6 +38,39 @@ class TestCircuitBreaker(unittest.TestCase):
         # After many failures, p_healthy is low, so cooldown should be high
         self.assertGreater(cb._cooldown, 60)
 
+    def test_open_breaker_recovers_after_cooldown(self):
+        cb = CircuitBreaker(threshold=1, base_cooldown=0.0)
+        cb.record_failure()
+        self.assertEqual(cb.state, State.OPEN)
+        # cooldown=0 → next attempt transitions to HALF_OPEN (probe allowed)
+        self.assertTrue(cb.should_attempt())
+        self.assertEqual(cb.state, State.HALF_OPEN)
+
+    def test_open_breaker_releases_when_monotonic_regresses(self):
+        # Simulate a host/process reboot: a stale _last_fail_time captured
+        # under a prior monotonic clock that is now larger than the stored
+        # value would make `elapsed` negative. The breaker must release to
+        # HALF_OPEN rather than deadlock OPEN forever.
+        cb = CircuitBreaker(threshold=1, base_cooldown=3600.0)
+        cb.record_failure()
+        self.assertEqual(cb.state, State.OPEN)
+        # Force a stale last_fail_time larger than current monotonic().
+        cb._last_fail_time = float("inf")
+        self.assertTrue(cb.should_attempt(), "stale monotonic should allow a probe")
+        self.assertEqual(cb.state, State.HALF_OPEN)
+
+    def test_open_breaker_with_unset_last_fail_time_releases(self):
+        # A breaker that reaches OPEN without record_failure setting a real
+        # timestamp (hand-constructed, corrupt load, or migrated state) has
+        # _last_fail_time=0.0 — elapsed becomes hugely positive, so the
+        # zero-timestamp guard must release to HALF_OPEN rather than honor
+        # an unreachable cooldown.
+        cb = CircuitBreaker(threshold=1, base_cooldown=3600.0)
+        cb.state = State.OPEN
+        cb._last_fail_time = 0.0
+        self.assertTrue(cb.should_attempt(), "unset last_fail_time should allow a probe")
+        self.assertEqual(cb.state, State.HALF_OPEN)
+
 
 class TestCircuitBreakerRegistry(unittest.TestCase):
     def test_get_creates_default(self):

@@ -124,6 +124,7 @@ class SQLiteStore:
     # ── Beliefs ─────────────────────────────────────────────────────
 
     def save_beliefs(self, engine: BeliefEngine) -> None:
+        # ponytail: per-process threading.Lock, no cross-process file lock — concurrent CLI invocations on the same DB may lose updates. Upgrade: fcntl.flock advisory lock if multiple writers share one DB.
         with self._lock:
             self._write_beliefs(self.conn, engine)
             self.conn.commit()

@@ -55,7 +55,12 @@ class CircuitBreaker:
             return True
         if self.state == State.OPEN:
             elapsed = time.monotonic() - self._last_fail_time
-            if elapsed >= self._cooldown:
+            # ponytail: monotonic clock regression guard only — upgrade: persist wall-clock + boot_id if cross-host failover needed
+            # _last_fail_time==0.0 ⇒ never set (hand-constructed/corrupt state); treat as stale and probe.
+            if self._last_fail_time == 0.0 or elapsed < 0 or elapsed >= self._cooldown:
+                # elapsed < 0 ⇒ monotonic clock regressed (process/host
+                # reboot since _last_fail_time was captured). Allow a probe
+                # rather than deadlocking OPEN forever on stale timing.
                 self.state = State.HALF_OPEN
                 self._total_transitions += 1
                 return True

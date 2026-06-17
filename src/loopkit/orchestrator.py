@@ -166,10 +166,18 @@ class Orchestrator:
         context: str = "global",
         host: str | None = None,
     ) -> None:
-        """Record an outcome, updating beliefs and circuit breakers."""
+        """Record an outcome, updating beliefs and circuit breakers.
+
+        When ``entity_type == 'host'`` and no explicit ``host`` was passed,
+        the breaker is fed using ``entity_id`` — this makes the natural
+        operator pattern (``record-outcome --type host --id box1 --fail``)
+        open the breaker for ``box1`` without requiring a redundant ``--host``
+        flag.
+        """
         self.beliefs.update(entity_type, entity_id, success, context)
-        if host:
-            self.breakers.record(host, success)
+        breaker_host = host or (entity_id if entity_type == "host" else None)
+        if breaker_host:
+            self.breakers.record(breaker_host, success)
         if self.store:
             self.store.log_event(
                 source="orchestrator",

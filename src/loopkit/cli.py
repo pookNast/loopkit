@@ -120,11 +120,13 @@ def cmd_health(args: argparse.Namespace) -> int:
 
 
 def cmd_check_spin(args: argparse.Namespace) -> int:
-    if args.from_file:
-        with open(args.from_file) as f:
-            raw = f.read()
-    else:
+    # --from accepts PATH | @PATH | - | omitted (omitted and - both read stdin)
+    if args.from_file is None or args.from_file == "-":
         raw = sys.stdin.read()
+    else:
+        path = args.from_file[1:] if args.from_file.startswith("@") else args.from_file
+        with open(path) as f:
+            raw = f.read()
     detector = SpinDetector(epsilon=args.epsilon, window=args.window)
     spinning = False
     for line in raw.splitlines():

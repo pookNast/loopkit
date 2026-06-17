@@ -126,6 +126,22 @@ class TestShouldDispatch(_TmpDb):
         self.assertIs(res["allowed"], False)
         self.assertIs(res["circuit_breaker_open"], True)
 
+    def test_breaker_opens_via_entity_type_host_without_explicit_flag(self):
+        # Natural operator pattern: record host failures by entity_type=host
+        # with no --host flag — breaker must still feed on entity_id.
+        host = "nohostflag"
+        for _ in range(4):
+            _run(["record-outcome", "--db", self.db, "--type", "host",
+                  "--id", host, "--fail"])
+        code, out, _ = _run([
+            "should-dispatch", "--db", self.db,
+            "--priority", "99", "--host", host,
+        ])
+        self.assertEqual(code, 1, out)
+        res = json.loads(out)
+        self.assertIs(res["allowed"], False)
+        self.assertIs(res["circuit_breaker_open"], True)
+
 
 class TestCheckSpin(_TmpDb):
     def test_identical_outputs_spinning_from_file(self):
@@ -150,6 +166,29 @@ class TestCheckSpin(_TmpDb):
         self.assertEqual(code, 0, out)
         res = json.loads(out)
         self.assertIs(res["spinning"], False)
+
+    def test_from_at_path_reads_file(self):
+        spinfile = os.path.join(self._dir, "spin.txt")
+        with open(spinfile, "w") as f:
+            f.write("x\nx\nx\nx\n")
+        code, out, _ = _run([
+            "check-spin", "--db", self.db, "--epsilon", "0.15",
+            "--window", "3", "--from", f"@{spinfile}",
+        ])
+        self.assertEqual(code, 1, out)
+        res = json.loads(out)
+        self.assertIs(res["spinning"], True)
+        self.assertEqual(res["outputs_seen"], 4)
+
+    def test_from_dash_reads_stdin(self):
+        code, out, _ = _run(
+            ["check-spin", "--db", self.db, "--epsilon", "0.15",
+             "--window", "3", "--from", "-"],
+            stdin_data="y\ny\ny\ny\n",
+        )
+        self.assertEqual(code, 1, out)
+        res = json.loads(out)
+        self.assertIs(res["spinning"], True)
 
 
 class TestEval(_TmpDb):
