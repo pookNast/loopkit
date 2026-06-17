@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "loopkit"
-version = "0.1.0"
+version = "0.2.0"
 description = "Probabilistic orchestration primitives for AI agent loops. Zero dependencies."
 readme = "README.md"
 license = "MIT"
@@ -40,5 +40,25 @@ Homepage = "https://github.com/pookNast/loopkit"
 Repository = "https://github.com/pookNast/loopkit"
 Issues = "https://github.com/pookNast/loopkit/issues"
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=7",
+    "ruff>=0.4",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/loopkit"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/loopkit/py.typed" = "loopkit/py.typed"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

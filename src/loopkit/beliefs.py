@@ -17,8 +17,7 @@ from __future__ import annotations
 
 import math
 import random
-from dataclasses import dataclass, field
-from typing import Optional
+from dataclasses import dataclass
 
 
 @dataclass
@@ -135,15 +134,21 @@ class BeliefEngine:
     def select_best(
         self,
         entity_type: str,
-        candidates: Optional[list[str]] = None,
+        candidates: list[str] | None = None,
         context: str = "global",
         min_obs: int = 0,
-    ) -> Optional[str]:
+    ) -> str | None:
         """Thompson Sampling: sample from each candidate's posterior, return argmax.
 
-        If min_obs > 0, entities with fewer observations are included
-        (their wide priors naturally explore).  If candidates is None,
-        uses all known entities of that type.
+        If candidates is None, uses all known entities of that type.
+
+        If min_obs > 0, a forced-exploration warmup is enforced: as long as
+        any candidate has fewer than min_obs observations, the least-tried
+        under-sampled candidate is returned deterministically (rather than
+        sampling).  Once every candidate has been tried at least min_obs
+        times, pure Thompson Sampling takes over -- wide priors then keep
+        exploring naturally.  This prevents a lucky early sample from
+        starving competitors of data.
         """
         if candidates is None:
             candidates = [
@@ -153,6 +158,18 @@ class BeliefEngine:
             ]
         if not candidates:
             return None
+
+        # Forced-exploration warmup: ensure each candidate is tried enough.
+        if min_obs > 0:
+            undertried = [
+                eid for eid in candidates
+                if self.get(entity_type, eid, context).total_obs < min_obs
+            ]
+            if undertried:
+                return min(
+                    undertried,
+                    key=lambda eid: self.get(entity_type, eid, context).total_obs,
+                )
 
         best_id = None
         best_sample = -1.0

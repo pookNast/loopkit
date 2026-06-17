@@ -103,6 +103,8 @@ from loopkit import CUSUMBank
 bank = CUSUMBank()
 bank.register("success_rate", baseline=0.85, allowance_k=0.05, threshold_h=4.0)
 bank.register("avg_cost", baseline=1.50, allowance_k=0.10, threshold_h=5.0)
+# baselines are used as-is. Pass auto_calibrate=True to instead derive the
+# baseline from the mean of the first calibration_window (30) observations.
 
 # Feed observations each cycle
 alerts = bank.update_many({
@@ -247,7 +249,7 @@ print(f"3 voters at 80%: {condorcet_accuracy(0.80, 3):.1%}")  # 89.6%
 
 evaluator = EnsembleEvaluator(
     cheap_fn=lambda task: run_haiku_eval(task),     # returns "PASS" or "FAIL"
-    expensive_fn=lambda task: run_opus_eval(task),   # tiebreak
+    expensive_fn=lambda task: run_opus_eval(task),   # optional tiebreak
     n_voters=3,
     cheap_cost=0.2,
     expensive_cost=1.0,
@@ -258,6 +260,20 @@ print(f"Verdict: {result.verdict}, agreement: {result.agreement_ratio:.0%}")
 print(f"Cost ratio vs single expensive: {result.cost_ratio}")
 ```
 
+> **Independence matters.** The Condorcet lift only materializes when voters make *independent* errors. Three calls to the same deterministic model (temperature 0, fixed seed) return identical verdicts and majority voting adds nothing. For real diversity pass distinct callables via `voters=[...]` -- different models, temperatures, seeds, or prompts:
+> ```python
+> evaluator = EnsembleEvaluator(
+>     voters=[
+>         lambda t: run_model(t, model="haiku", temperature=0.3),
+>         lambda t: run_model(t, model="glm-flash", temperature=0.3),
+>         lambda t: run_model(t, model="qwopus", temperature=0.3),
+>     ],
+>     expensive_fn=lambda t: run_model(t, model="opus", temperature=0.0),
+> )
+> ```
+>
+> By default the expensive tiebreaker fires **only when no verdict holds a strict majority** (e.g. a 3-way split), not on a normal 2-1 split -- that is where the cost saving comes from. Pass `escalate_on="any_disagreement"` to re-check every non-unanimous vote.
+
 ## Persistence
 
 All gems work in-memory by default.  Add SQLite persistence with one argument:
@@ -267,8 +283,19 @@ ork = Orchestrator(db_path="loopkit.db")
 
 # ... use normally ...
 
-ork.save()  # persist all state
+ork.save()  # persist all state atomically (single transaction)
 # State auto-loads on next Orchestrator(db_path="loopkit.db")
+```
+
+`SQLiteStore` is thread-safe (a single WAL connection guarded by an internal lock),
+usable as a context manager, and exposes `save_all(...)` for an atomic multi-gem
+snapshot so a crash mid-save cannot leave half-persisted state:
+
+```python
+from loopkit import SQLiteStore
+
+with SQLiteStore("loopkit.db") as store:
+    store.save_all(engine=engine, cusum=bank, breakers=registry, dag=dag)
 ```
 
 Or use `SQLiteStore` directly for fine-grained control:

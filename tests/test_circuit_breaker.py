@@ -1,4 +1,5 @@
 import unittest
+
 from loopkit.circuit_breaker import CircuitBreaker, CircuitBreakerRegistry, State
 
 

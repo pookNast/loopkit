@@ -1,4 +1,5 @@
 import unittest
+
 from loopkit.cusum import CUSUM, CUSUMBank
 
 
@@ -37,6 +38,16 @@ class TestCUSUM(unittest.TestCase):
         self.assertAlmostEqual(c.baseline, 0.80)
         self.assertFalse(c._calibrating)
 
+    def test_direct_construction_does_not_clobber_baseline(self):
+        # Constructing CUSUM directly with a baseline must use it immediately
+        # (default _calibrating=False now), not replace it via calibration.
+        c = CUSUM(baseline=0.85)
+        self.assertFalse(c._calibrating)
+        for _ in range(40):
+            c.update(0.50)  # would corrupt baseline if calibrating
+        self.assertAlmostEqual(c.baseline, 0.85)
+        self.assertGreater(c.observation_count, 0)
+
     def test_reset(self):
         c = CUSUM(baseline=0.85, _calibrating=False)
         c.update(0.5)
@@ -51,6 +62,23 @@ class TestCUSUMBank(unittest.TestCase):
         bank.register("success_rate", baseline=0.85)
         result = bank.update("success_rate", 0.85)
         self.assertFalse(result)
+
+    def test_explicit_baseline_not_clobbered_by_default(self):
+        # Default auto_calibrate=False: an explicit baseline sticks and is
+        # used immediately (not replaced by a running mean).
+        bank = CUSUMBank()
+        det = bank.register("rate", baseline=0.85)
+        self.assertFalse(det._calibrating)
+        bank.update("rate", 0.85)
+        self.assertAlmostEqual(det.baseline, 0.85)
+
+    def test_auto_calibrate_opt_in_overrides_baseline(self):
+        bank = CUSUMBank()
+        det = bank.register("rate", baseline=0.0, auto_calibrate=True, calibration_window=5)
+        self.assertTrue(det._calibrating)
+        for _ in range(5):
+            det.update(0.80)
+        self.assertAlmostEqual(det.baseline, 0.80)
 
     def test_update_many(self):
         bank = CUSUMBank()

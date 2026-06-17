@@ -15,7 +15,7 @@ Mathematical basis:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass
@@ -29,7 +29,7 @@ class CUSUM:
     lower: float = 0.0
     observation_count: int = 0
     alert_count: int = 0
-    _calibrating: bool = True
+    _calibrating: bool = False
     _cal_sum: float = 0.0
     _cal_n: int = 0
     _cal_target: int = 30
@@ -91,9 +91,16 @@ class CUSUMBank:
         baseline: float,
         allowance_k: float = 0.05,
         threshold_h: float = 4.0,
-        auto_calibrate: bool = True,
+        auto_calibrate: bool = False,
         calibration_window: int = 30,
     ) -> CUSUM:
+        """Register a named metric.
+
+        ``baseline`` is used as-is by default.  Pass ``auto_calibrate=True``
+        to discard it and derive the baseline from the mean of the first
+        ``calibration_window`` observations instead (useful when you do not
+        know a good baseline up front -- pass any placeholder here).
+        """
         detector = CUSUM(
             baseline=baseline,
             allowance_k=allowance_k,

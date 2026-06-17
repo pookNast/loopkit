@@ -13,10 +13,9 @@ Uses BetaBelief from the beliefs module for per-skill probability estimates.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
-from typing import Optional
+from dataclasses import dataclass
 
-from loopkit.beliefs import BetaBelief, BeliefEngine
+from loopkit.beliefs import BeliefEngine
 
 
 @dataclass
@@ -40,7 +39,7 @@ class SkillDAG:
     success probabilities from a BeliefEngine.
     """
 
-    def __init__(self, beliefs: Optional[BeliefEngine] = None) -> None:
+    def __init__(self, beliefs: BeliefEngine | None = None) -> None:
         self.beliefs = beliefs or BeliefEngine()
         self._edges: dict[str, list[str]] = {}  # parent -> [children]
         self._reverse: dict[str, list[str]] = {}  # child -> [parents]
@@ -138,7 +137,7 @@ class SkillDAG:
             root: self.chain_reliability(root, context) for root in self.roots()
         }
 
-    def highest_uncertainty_skill(self, context: str = "global") -> Optional[str]:
+    def highest_uncertainty_skill(self, context: str = "global") -> str | None:
         """Return the skill with highest variance -- best target for active learning."""
         best = None
         best_var = -1.0

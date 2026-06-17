@@ -1,6 +1,7 @@
 import unittest
-from loopkit.orchestrator import Orchestrator
+
 from loopkit.degradation import SystemMetrics
+from loopkit.orchestrator import Orchestrator
 
 
 class TestOrchestrator(unittest.TestCase):
@@ -48,6 +49,19 @@ class TestOrchestrator(unittest.TestCase):
         )
         self.assertGreater(wins, 35)
 
+    def test_select_model_forwards_min_obs_warmup(self):
+        # One warm model + one under-tried model: with min_obs warmup the
+        # under-tried model is explored rather than Thompson-sampled away.
+        for _ in range(20):
+            self.ork.beliefs.update("model", "opus", True, "debug")
+        self.ork.beliefs.update("model", "haiku", False, "debug")  # 1 obs
+        # min_obs=5 forces exploration of haiku (least-tried) every time.
+        for _ in range(10):
+            self.assertEqual(
+                self.ork.select_model(["opus", "haiku"], "debug", min_obs=5),
+                "haiku",
+            )
+
     def test_record_outcome(self):
         self.ork.record_outcome("skill", "build", True, host="local")
         b = self.ork.beliefs.get("skill", "build")
@@ -55,7 +69,7 @@ class TestOrchestrator(unittest.TestCase):
 
     def test_spin_detection(self):
         base = "Same output every time"
-        for i in range(5):
+        for _ in range(5):
             result = self.ork.check_spin("job1", base)
         self.assertTrue(result)
 

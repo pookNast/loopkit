@@ -1,5 +1,6 @@
 import unittest
-from loopkit.beliefs import BetaBelief, BeliefEngine
+
+from loopkit.beliefs import BeliefEngine, BetaBelief
 
 
 class TestBetaBelief(unittest.TestCase):
@@ -77,6 +78,34 @@ class TestBeliefEngine(unittest.TestCase):
     def test_select_best_empty(self):
         engine = BeliefEngine()
         self.assertIsNone(engine.select_best("model"))
+
+    def test_select_best_min_obs_forces_exploration(self):
+        # With min_obs > 0, under-tried candidates are returned first
+        # (least-tried wins) instead of Thompson sampling.
+        engine = BeliefEngine()
+        for _ in range(20):
+            engine.update("model", "opus", True)   # well-tried
+        for _ in range(5):
+            engine.update("model", "sonnet", True)  # under min_obs=10
+        engine.update("model", "haiku", False)      # 1 obs, least-tried
+        # haiku has the fewest observations -> forced exploration returns it
+        choice = engine.select_best(
+            "model", ["opus", "sonnet", "haiku"], min_obs=10
+        )
+        self.assertEqual(choice, "haiku")
+
+    def test_select_best_min_obs_falls_back_to_sampling(self):
+        # Once every candidate meets min_obs, Thompson sampling resumes.
+        engine = BeliefEngine()
+        for _ in range(15):
+            engine.update("model", "opus", True)
+        for _ in range(15):
+            engine.update("model", "haiku", False)
+        wins = sum(
+            1 for _ in range(50)
+            if engine.select_best("model", ["opus", "haiku"], min_obs=10) == "opus"
+        )
+        self.assertGreater(wins, 40)
 
     def test_ranked_by_mean(self):
         engine = BeliefEngine()

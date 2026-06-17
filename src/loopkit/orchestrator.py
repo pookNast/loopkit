@@ -31,13 +31,12 @@ Usage::
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Optional
+from typing import Any
 
 from loopkit.beliefs import BeliefEngine
 from loopkit.circuit_breaker import CircuitBreakerRegistry
 from loopkit.cusum import CUSUMBank
 from loopkit.degradation import DegradationLadder, DegradationLevel, SystemMetrics
-from loopkit.ensemble import EnsembleEvaluator
 from loopkit.ncd import SpinDetector
 from loopkit.skill_dag import SkillDAG
 from loopkit.store import SQLiteStore
@@ -50,7 +49,7 @@ class DispatchDecision:
     allowed: bool
     reason: str
     degradation_level: DegradationLevel
-    model_override: Optional[str] = None
+    model_override: str | None = None
     circuit_breaker_open: bool = False
 
 
@@ -62,7 +61,7 @@ class Orchestrator:
 
     def __init__(
         self,
-        db_path: Optional[str] = None,
+        db_path: str | None = None,
         decay_factor: float = 0.99,
     ) -> None:
         self.store = SQLiteStore(db_path) if db_path else None
@@ -88,7 +87,7 @@ class Orchestrator:
         self,
         job_priority: int,
         host: str,
-        metrics: Optional[SystemMetrics] = None,
+        metrics: SystemMetrics | None = None,
     ) -> DispatchDecision:
         """Unified dispatch decision combining all gems.
 
@@ -133,14 +132,18 @@ class Orchestrator:
         candidates: list[str],
         job_type: str = "general",
         min_obs: int = 5,
-        fallback: Optional[str] = None,
+        fallback: str | None = None,
     ) -> str:
         """Thompson Sampling model selection with cold-start fallback.
 
-        If no model has min_obs observations for this job_type,
-        returns fallback (or first candidate).
+        - If *no* candidate has ``min_obs`` observations for this job_type
+          (total cold start), returns ``fallback`` (or the first candidate).
+        - Otherwise delegates to :meth:`BeliefEngine.select_best` with the
+          same ``min_obs``, so the forced-exploration warmup applies
+          consistently: under-tried candidates are explored before pure
+          Thompson exploitation takes over.
         """
-        # Check cold start
+        # Total cold start: nothing is warm enough to trust a sample.
         has_data = any(
             self.beliefs.get("model", m, job_type).total_obs >= min_obs
             for m in candidates
@@ -148,7 +151,9 @@ class Orchestrator:
         if not has_data:
             return fallback or candidates[0]
 
-        result = self.beliefs.select_best("model", candidates, context=job_type)
+        result = self.beliefs.select_best(
+            "model", candidates, context=job_type, min_obs=min_obs
+        )
         return result or fallback or candidates[0]
 
     # ── Outcome recording ───────────────────────────────────────────
@@ -159,7 +164,7 @@ class Orchestrator:
         entity_id: str,
         success: bool,
         context: str = "global",
-        host: Optional[str] = None,
+        host: str | None = None,
     ) -> None:
         """Record an outcome, updating beliefs and circuit breakers."""
         self.beliefs.update(entity_type, entity_id, success, context)
@@ -251,13 +256,15 @@ class Orchestrator:
     # ── Persistence ─────────────────────────────────────────────────
 
     def save(self) -> None:
-        """Persist all state to SQLite (if store configured)."""
+        """Persist all state to SQLite (if store configured), atomically."""
         if not self.store:
             return
-        self.store.save_beliefs(self.beliefs)
-        self.store.save_cusum(self.cusum)
-        self.store.save_circuit_breakers(self.breakers)
-        self.store.save_skill_graph(self.dag)
+        self.store.save_all(
+            engine=self.beliefs,
+            cusum=self.cusum,
+            breakers=self.breakers,
+            dag=self.dag,
+        )
 
     def decay_all(self) -> None:
         """Apply daily decay to all beliefs."""

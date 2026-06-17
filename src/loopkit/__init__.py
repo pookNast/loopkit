@@ -14,17 +14,17 @@ Seven gems:
 Compose them with Orchestrator for a full probabilistic-core / deterministic-shell system.
 """
 
-from loopkit.beliefs import BetaBelief, BeliefEngine
-from loopkit.cusum import CUSUM, CUSUMBank
-from loopkit.ncd import ncd, SpinDetector
+from loopkit.beliefs import BeliefEngine, BetaBelief
 from loopkit.circuit_breaker import CircuitBreaker, CircuitBreakerRegistry
-from loopkit.skill_dag import SkillDAG
+from loopkit.cusum import CUSUM, CUSUMBank
 from loopkit.degradation import DegradationLadder, DegradationLevel
 from loopkit.ensemble import EnsembleEvaluator
+from loopkit.ncd import SpinDetector, ncd
 from loopkit.orchestrator import Orchestrator
+from loopkit.skill_dag import SkillDAG
 from loopkit.store import SQLiteStore
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "BetaBelief",

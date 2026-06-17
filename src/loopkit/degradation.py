@@ -13,9 +13,8 @@ and can force model downgrades.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import IntEnum
-from typing import Any, Callable, Optional
 
 
 class DegradationLevel(IntEnum):
@@ -31,8 +30,8 @@ class LevelPolicy:
     """What actions to take at a given degradation level."""
 
     max_priority: int = 100  # Only allow jobs with priority <= this
-    model_override: Optional[str] = None  # Force all jobs to this model
-    max_concurrency: Optional[int] = None  # Override max concurrent
+    model_override: str | None = None  # Force all jobs to this model
+    max_concurrency: int | None = None  # Override max concurrent
     alert: bool = False
     halt: bool = False
 
@@ -71,8 +70,8 @@ class DegradationLadder:
 
     def __init__(
         self,
-        policies: Optional[dict[DegradationLevel, LevelPolicy]] = None,
-        thresholds: Optional[dict[str, tuple[float, int]]] = None,
+        policies: dict[DegradationLevel, LevelPolicy] | None = None,
+        thresholds: dict[str, tuple[float, int]] | None = None,
     ) -> None:
         self.policies = policies or dict(DEFAULT_POLICIES)
         # (threshold, pressure_points) for each signal
@@ -116,7 +115,7 @@ class DegradationLadder:
     def current(self) -> DegradationLevel:
         return self._current
 
-    def policy(self, level: Optional[DegradationLevel] = None) -> LevelPolicy:
+    def policy(self, level: DegradationLevel | None = None) -> LevelPolicy:
         """Get the policy for a level (default: current)."""
         return self.policies[level or self._current]
 

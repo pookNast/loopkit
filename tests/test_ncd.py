@@ -1,5 +1,6 @@
 import unittest
-from loopkit.ncd import ncd, SpinDetector
+
+from loopkit.ncd import SpinDetector, ncd
 
 
 class TestNCD(unittest.TestCase):

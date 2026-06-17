@@ -1,4 +1,5 @@
 import unittest
+
 from loopkit.degradation import (
     DegradationLadder,
     DegradationLevel,
